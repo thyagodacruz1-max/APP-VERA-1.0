@@ -60,13 +60,17 @@ const AdminAppointmentCard: React.FC<{ appointment: Appointment, client?: User }
 
 
 const AllAppointmentsList: React.FC = () => {
-  const { appointments, getUserById } = useApp();
+  const { appointments, getUserById, isLoading } = useApp();
   const appointmentsCountRef = useRef(appointments.length);
   const isInitialMount = useRef(true);
 
   useEffect(() => {
+    // Don't play sound on initial load, only on subsequent updates
     if (isInitialMount.current) {
-      isInitialMount.current = false;
+      if (appointments.length > 0) {
+        isInitialMount.current = false;
+        appointmentsCountRef.current = appointments.length;
+      }
       return;
     }
 
@@ -96,7 +100,11 @@ const AllAppointmentsList: React.FC = () => {
   return (
     <Card>
       <h2 className="text-2xl font-bold text-brand-dark mb-6">Todos os Agendamentos</h2>
-      {upcomingAppointments.length > 0 ? (
+      {isLoading ? (
+        <div className="text-center py-10">
+            <p className="text-brand-text">Carregando agendamentos...</p>
+        </div>
+      ) : upcomingAppointments.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {upcomingAppointments.map(apt => (
             <AdminAppointmentCard key={apt.id} appointment={apt} client={apt.userId ? getUserById(apt.userId) : undefined} />

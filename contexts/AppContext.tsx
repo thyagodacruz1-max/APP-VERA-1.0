@@ -1,9 +1,8 @@
 
-import React, { createContext, useContext, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useMemo, useCallback, useState, useEffect } from 'react';
 import { Appointment, AppointmentStatus, Service, User, Announcement, Partnership } from '../types';
-import { useLocalStorage } from '../hooks/useLocalStorage';
-import { INITIAL_SERVICES } from '../constants';
 import useAuth from '../hooks/useAuth';
+import * as api from '../lib/api';
 
 interface AppContextType {
   // Auth
@@ -19,15 +18,19 @@ interface AppContextType {
   announcements: Announcement[];
   partnerships: Partnership[];
   
+  // State
+  isLoading: boolean;
+  error: string | null;
+
   // Actions
-  addAppointment: (appointment: Omit<Appointment, 'id' | 'status' | 'userId'>) => void;
-  cancelAppointment: (appointmentId: string) => void;
-  updateAppointmentStatus: (appointmentId: string, status: AppointmentStatus) => void;
-  updateServicePrice: (serviceId: string, newPrice: number) => void;
-  addAnnouncement: (content: string) => void;
-  deleteAnnouncement: (announcementId: string) => void;
-  addPartnership: (name: string, description: string) => void;
-  deletePartnership: (partnershipId: string) => void;
+  addAppointment: (appointment: Omit<Appointment, 'id' | 'status' | 'userId'>) => Promise<void>;
+  cancelAppointment: (appointmentId: string) => Promise<void>;
+  updateAppointmentStatus: (appointmentId: string, status: AppointmentStatus) => Promise<void>;
+  updateServicePrice: (serviceId: string, newPrice: number) => Promise<void>;
+  addAnnouncement: (content: string) => Promise<void>;
+  deleteAnnouncement: (announcementId: string) => Promise<void>;
+  addPartnership: (name: string, description: string) => Promise<void>;
+  deletePartnership: (partnershipId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -35,60 +38,89 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const auth = useAuth();
   
-  const [appointments, setAppointments] = useLocalStorage<Appointment[]>('veramagrin-appointments', []);
-  const [services, setServices] = useLocalStorage<Service[]>('veramagrin-services', INITIAL_SERVICES);
-  const [announcements, setAnnouncements] = useLocalStorage<Announcement[]>('veramagrin-announcements', []);
-  const [partnerships, setPartnerships] = useLocalStorage<Partnership[]>('veramagrin-partnerships', []);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [partnerships, setPartnerships] = useState<Partnership[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const addAppointment = useCallback((appointmentData: Omit<Appointment, 'id' | 'status' | 'userId'>) => {
-      const newAppointment: Appointment = {
-          ...appointmentData,
-          id: `apt_${Date.now()}`,
-          status: AppointmentStatus.PENDING,
-          userId: auth.user?.id
-      };
+  // Initial data fetch
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const [
+          servicesData, 
+          appointmentsData,
+          announcementsData,
+          partnershipsData
+        ] = await Promise.all([
+          api.getServices(),
+          api.getAppointments(),
+          api.getAnnouncements(),
+          api.getPartnerships(),
+        ]);
+        setServices(servicesData);
+        setAppointments(appointmentsData);
+        setAnnouncements(announcementsData);
+        setPartnerships(partnershipsData);
+      } catch (err) {
+        setError("Não foi possível carregar os dados. Tente recarregar a página.");
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  const addAppointmentCb = useCallback(async (appointmentData: Omit<Appointment, 'id' | 'status' | 'userId'>) => {
+      const dataWithUser = { ...appointmentData, userId: auth.user?.id };
+      const newAppointment = await api.addAppointment(dataWithUser);
       setAppointments(prev => [...prev, newAppointment]);
-  }, [setAppointments, auth.user]);
+  }, [auth.user]);
 
-  const cancelAppointment = useCallback((appointmentId: string) => {
-    // For clients, this just removes it. For admins, it could be a status change.
-    // Sticking to removal for client-side simplicity.
+  const cancelAppointmentCb = useCallback(async (appointmentId: string) => {
+    await api.cancelAppointment(appointmentId);
     setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
-  }, [setAppointments]);
+  }, []);
   
-  const updateAppointmentStatus = useCallback((appointmentId: string, status: AppointmentStatus) => {
-    setAppointments(prev => prev.map(apt => apt.id === appointmentId ? { ...apt, status } : apt));
-  }, [setAppointments]);
+  const updateAppointmentStatusCb = useCallback(async (appointmentId: string, status: AppointmentStatus) => {
+    const updatedAppointment = await api.updateAppointmentStatus(appointmentId, status);
+    setAppointments(prev => prev.map(apt => apt.id === appointmentId ? updatedAppointment : apt));
+  }, []);
 
-  const updateServicePrice = useCallback((serviceId: string, newPrice: number) => {
-    setServices(prev => prev.map(srv => srv.id === serviceId ? { ...srv, price: newPrice } : srv));
-  }, [setServices]);
+  const updateServicePriceCb = useCallback(async (serviceId: string, newPrice: number) => {
+    const updatedService = await api.updateServicePrice(serviceId, newPrice);
+    setServices(prev => prev.map(srv => srv.id === serviceId ? updatedService : srv));
+  }, []);
 
-  const addAnnouncement = useCallback((content: string) => {
-      const newAnnouncement: Announcement = { id: `an_${Date.now()}`, content };
-      setAnnouncements(prev => [newAnnouncement, ...prev]); // Add to the top
-  }, [setAnnouncements]);
+  const addAnnouncementCb = useCallback(async (content: string) => {
+      const newAnnouncement = await api.addAnnouncement(content);
+      setAnnouncements(prev => [newAnnouncement, ...prev]);
+  }, []);
 
-  const deleteAnnouncement = useCallback((announcementId: string) => {
+  const deleteAnnouncementCb = useCallback(async (announcementId: string) => {
+    await api.deleteAnnouncement(announcementId);
     setAnnouncements(prev => prev.filter(an => an.id !== announcementId));
-  }, [setAnnouncements]);
+  }, []);
   
-  const addPartnership = useCallback((name: string, description: string) => {
-      const newPartnership: Partnership = { id: `p_${Date.now()}`, name, description };
+  const addPartnershipCb = useCallback(async (name: string, description: string) => {
+      const newPartnership = await api.addPartnership(name, description);
       setPartnerships(prev => [...prev, newPartnership]);
-  }, [setPartnerships]);
+  }, []);
 
-  const deletePartnership = useCallback((partnershipId: string) => {
+  const deletePartnershipCb = useCallback(async (partnershipId: string) => {
+    await api.deletePartnership(partnershipId);
     setPartnerships(prev => prev.filter(p => p.id !== partnershipId));
-  }, [setPartnerships]);
+  }, []);
 
-  // FIX: Added a dummy register function to satisfy the call in the unused Register.tsx component.
-  // This resolves a compilation error without implementing a deprecated feature.
   const register = useCallback(async (data: any): Promise<User | null> => {
     console.warn("Register function is not implemented as user registration appears to be a deprecated feature.");
     return null;
   }, []);
-
 
   const value = useMemo(() => ({
     currentUser: auth.user,
@@ -100,15 +132,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     services,
     announcements,
     partnerships,
-    addAppointment,
-    cancelAppointment,
-    updateAppointmentStatus,
-    updateServicePrice,
-    addAnnouncement,
-    deleteAnnouncement,
-    addPartnership,
-    deletePartnership,
-  }), [auth, register, appointments, services, announcements, partnerships, addAppointment, cancelAppointment, updateAppointmentStatus, updateServicePrice, addAnnouncement, deleteAnnouncement, addPartnership, deletePartnership]);
+    isLoading,
+    error,
+    addAppointment: addAppointmentCb,
+    cancelAppointment: cancelAppointmentCb,
+    updateAppointmentStatus: updateAppointmentStatusCb,
+    updateServicePrice: updateServicePriceCb,
+    addAnnouncement: addAnnouncementCb,
+    deleteAnnouncement: deleteAnnouncementCb,
+    addPartnership: addPartnershipCb,
+    deletePartnership: deletePartnershipCb,
+  }), [
+    auth, register, appointments, services, announcements, partnerships, isLoading, error,
+    addAppointmentCb, cancelAppointmentCb, updateAppointmentStatusCb, updateServicePriceCb, 
+    addAnnouncementCb, deleteAnnouncementCb, addPartnershipCb, deletePartnershipCb
+  ]);
 
   return (
     <AppContext.Provider value={value}>

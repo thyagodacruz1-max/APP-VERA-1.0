@@ -61,7 +61,8 @@ const AppointmentCard: React.FC<{ appointment: Appointment }> = ({ appointment }
 
 
 const AppointmentsList: React.FC = () => {
-  const { appointments } = useApp();
+  const { appointments, isLoading } = useApp();
+
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
         const dateA = new Date(`${a.date}T${a.time}`);
@@ -76,7 +77,12 @@ const AppointmentsList: React.FC = () => {
     <Card>
       <h2 className="text-2xl font-bold text-brand-dark mb-6">Meus Agendamentos</h2>
       <p className="text-sm text-brand-text -mt-4 mb-6">Os agendamentos são salvos apenas neste navegador.</p>
-      {upcomingAppointments.length > 0 ? (
+      
+      {isLoading ? (
+        <div className="text-center py-10">
+          <p className="text-brand-text">Carregando agendamentos...</p>
+        </div>
+      ) : upcomingAppointments.length > 0 ? (
         <div className="space-y-4">
           {upcomingAppointments.map(apt => (
             <AppointmentCard key={apt.id} appointment={apt} />

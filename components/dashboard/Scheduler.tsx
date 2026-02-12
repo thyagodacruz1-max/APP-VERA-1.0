@@ -17,24 +17,33 @@ const Scheduler: React.FC = () => {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientName || !clientPhone || !service || !date || !time) {
       alert('Por favor, preencha todos os campos.');
       return;
     }
-    addAppointment({ clientName, clientPhone, service, date, time });
-    setSuccessMessage(`Seu horário de ${service} para ${new Date(date + 'T00:00:00').toLocaleDateString('pt-BR')} às ${time} foi agendado! Aguarde a confirmação.`);
-    
-    // Reset form
-    setClientName('');
-    setClientPhone('');
-    setService(ServiceType.MANICURE);
-    setDate('');
-    setTime('');
+    setIsSubmitting(true);
+    try {
+      await addAppointment({ clientName, clientPhone, service, date, time });
+      setSuccessMessage(`Seu horário de ${service} para ${new Date(date + 'T00:00:00').toLocaleDateString('pt-BR')} às ${time} foi agendado! Aguarde a confirmação.`);
+      
+      // Reset form
+      setClientName('');
+      setClientPhone('');
+      setService(ServiceType.MANICURE);
+      setDate('');
+      setTime('');
 
-    setTimeout(() => setSuccessMessage(''), 5000);
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } catch (error) {
+        console.error("Failed to add appointment:", error);
+        alert("Ocorreu um erro ao agendar. Tente novamente.");
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
   const getTodayString = () => {
@@ -109,7 +118,7 @@ const Scheduler: React.FC = () => {
           </div>
         </div>
         <div className="pt-2">
-            <Button type="submit" disabled={!clientName || !clientPhone || !service || !date || !time}>Agendar Horário</Button>
+            <Button type="submit" isLoading={isSubmitting} disabled={!clientName || !clientPhone || !service || !date || !time || isSubmitting}>Agendar Horário</Button>
         </div>
       </form>
     </Card>
