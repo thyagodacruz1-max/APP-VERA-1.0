@@ -4,8 +4,9 @@ import Header from '../layout/Header';
 import AllAppointmentsList from './AllAppointmentsList';
 import PriceManager from './PriceManager';
 import AnnouncementManager from './AnnouncementManager';
+import AIAssistant from './AIAssistant';
 
-type AdminTab = 'appointments' | 'prices' | 'announcements';
+type AdminTab = 'appointments' | 'prices' | 'announcements' | 'ai';
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('appointments');
@@ -18,6 +19,8 @@ const AdminDashboard: React.FC = () => {
         return <PriceManager />;
       case 'announcements':
         return <AnnouncementManager />;
+      case 'ai':
+        return <AIAssistant />;
       default:
         return <AllAppointmentsList />;
     }
@@ -40,6 +43,7 @@ const AdminDashboard: React.FC = () => {
           <TabButton tab="appointments" label="Agendamentos" />
           <TabButton tab="prices" label="Gerenciar Preços" />
           <TabButton tab="announcements" label="Gerenciar Anúncios" />
+          <TabButton tab="ai" label="Assistente IA" />
         </div>
         <div>
           {renderTabContent()}
