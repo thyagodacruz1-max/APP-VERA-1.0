@@ -1,11 +1,9 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { useApp } from '../../contexts/AppContext';
-// FIX: The User type is now correctly defined and exported from `types.ts`.
 import { Appointment, User, AppointmentStatus } from '../../types';
 import Card from '../ui/Card';
-import { CalendarIcon, ClockIcon, UserIcon, PhoneIcon, WhatsAppIcon } from '../icons';
-import { SALON_WHATSAPP_NUMBER } from '../../constants';
+import { CalendarIcon, ClockIcon, UserIcon, PhoneIcon } from '../icons';
 
 const StatusBadge: React.FC<{ status: AppointmentStatus }> = ({ status }) => {
     const baseClasses = 'px-2 py-0.5 text-xs font-semibold rounded-full';
@@ -25,8 +23,8 @@ const AdminAppointmentCard: React.FC<{ appointment: Appointment, client?: User }
         weekday: 'long', day: '2-digit', month: 'long'
     });
     
-    const whatsappMessage = `Olá, ${client?.name?.split(' ')[0]}! Sobre o seu agendamento de ${appointment.service} para o dia ${formattedDate} às ${appointment.time}.`;
-    const whatsappLink = `https://wa.me/${client?.phone}?text=${encodeURIComponent(whatsappMessage)}`;
+    const clientPhone = client?.phone || appointment.clientPhone;
+    const clientName = client?.name || appointment.clientName;
 
     return (
         <div className="bg-brand-light p-4 rounded-lg shadow-sm border border-brand-primary/20 flex flex-col justify-between h-full">
@@ -42,31 +40,20 @@ const AdminAppointmentCard: React.FC<{ appointment: Appointment, client?: User }
                 <div className="border-t border-brand-primary/20 my-3"></div>
                 <div className="flex items-center text-brand-text text-sm">
                     <UserIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span className="font-semibold">{client?.name || appointment.clientName || 'Cliente não encontrado'}</span>
+                    <span className="font-semibold">{clientName || 'Cliente não encontrado'}</span>
                 </div>
                 <div className="flex items-center text-brand-text text-sm mt-1">
                     <PhoneIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span>{client?.phone || appointment.clientPhone || 'Telefone não disponível'}</span>
+                    <span>{clientPhone || 'Telefone não disponível'}</span>
                 </div>
             </div>
 
-            <div className="mt-4">
-                 {appointment.status === AppointmentStatus.PENDING && (
-                    <div className="flex space-x-2">
-                        <button onClick={() => updateAppointmentStatus(appointment.id, AppointmentStatus.CONFIRMED)} className="flex-1 px-3 py-1.5 text-xs text-center font-semibold bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">Confirmar</button>
-                        <button onClick={() => updateAppointmentStatus(appointment.id, AppointmentStatus.CANCELLED)} className="flex-1 px-3 py-1.5 text-xs text-center font-semibold bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors">Recusar</button>
-                    </div>
-                )}
-                 <a
-                    href={whatsappLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center mt-2 w-full px-3 py-1.5 text-xs text-center font-semibold bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-                >
-                    <WhatsAppIcon className="h-4 w-4 mr-1.5" />
-                    Enviar Mensagem
-                </a>
-            </div>
+            {appointment.status === AppointmentStatus.PENDING && (
+                <div className="mt-4 flex space-x-2">
+                    <button onClick={() => updateAppointmentStatus(appointment.id, AppointmentStatus.CONFIRMED)} className="flex-1 px-3 py-1.5 text-xs text-center font-semibold bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">Confirmar</button>
+                    <button onClick={() => updateAppointmentStatus(appointment.id, AppointmentStatus.CANCELLED)} className="flex-1 px-3 py-1.5 text-xs text-center font-semibold bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors">Recusar</button>
+                </div>
+            )}
         </div>
     );
 };
@@ -74,6 +61,27 @@ const AdminAppointmentCard: React.FC<{ appointment: Appointment, client?: User }
 
 const AllAppointmentsList: React.FC = () => {
   const { appointments, getUserById } = useApp();
+  const appointmentsCountRef = useRef(appointments.length);
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (appointments.length > appointmentsCountRef.current) {
+      const latestAppointment = appointments[appointments.length - 1];
+      
+      if (latestAppointment && latestAppointment.status === AppointmentStatus.PENDING) {
+        const audio = new Audio('https://cdn.freesound.org/previews/536/536442_11861313-lq.mp3');
+        audio.play().catch(error => {
+          console.error("A reprodução automática do áudio falhou. Interaja com a página para ativá-la.", error);
+        });
+      }
+    }
+    appointmentsCountRef.current = appointments.length;
+  }, [appointments]);
   
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
@@ -91,7 +99,6 @@ const AllAppointmentsList: React.FC = () => {
       {upcomingAppointments.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {upcomingAppointments.map(apt => (
-            // FIX: Check for apt.userId before calling getUserById to prevent errors for guest appointments.
             <AdminAppointmentCard key={apt.id} appointment={apt} client={apt.userId ? getUserById(apt.userId) : undefined} />
           ))}
         </div>

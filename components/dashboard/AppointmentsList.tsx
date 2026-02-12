@@ -3,8 +3,7 @@ import React, { useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Appointment, AppointmentStatus } from '../../types';
 import Card from '../ui/Card';
-import { CalendarIcon, ClockIcon, WhatsAppIcon, UserIcon } from '../icons';
-import { SALON_WHATSAPP_NUMBER } from '../../constants';
+import { CalendarIcon, ClockIcon, UserIcon } from '../icons';
 
 const StatusBadge: React.FC<{ status: AppointmentStatus }> = ({ status }) => {
     const baseClasses = 'px-2 py-0.5 text-xs font-semibold rounded-full';
@@ -21,9 +20,6 @@ const AppointmentCard: React.FC<{ appointment: Appointment }> = ({ appointment }
     const formattedDate = new Date(appointment.date + 'T00:00:00').toLocaleDateString('pt-BR', {
         weekday: 'long', day: '2-digit', month: 'long'
     });
-
-    const whatsappMessage = `Olá! Gostaria de falar sobre o agendamento de ${appointment.clientName} (${appointment.service}) para ${formattedDate} às ${appointment.time}.`;
-    const whatsappLink = `https://wa.me/${SALON_WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`;
     
     const handleCancel = () => {
         if (window.confirm("Tem certeza que deseja cancelar este agendamento?")) {
@@ -51,19 +47,10 @@ const AppointmentCard: React.FC<{ appointment: Appointment }> = ({ appointment }
                     <span>{appointment.time}</span>
                 </div>
             </div>
-            <div className="flex space-x-2 w-full pt-2">
-                 <a
-                    href={whatsappLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-full hover:bg-green-600 transition-colors duration-300 shadow-md"
-                >
-                    <WhatsAppIcon className="h-5 w-5 mr-2" />
-                    Contato
-                </a>
+            <div className="w-full pt-2">
                 <button
                     onClick={handleCancel}
-                    className="flex-1 flex items-center justify-center px-4 py-2 bg-red-500 text-white text-sm font-semibold rounded-full hover:bg-red-600 transition-colors duration-300 shadow-md"
+                    className="w-full flex items-center justify-center px-4 py-2 bg-red-500 text-white text-sm font-semibold rounded-full hover:bg-red-600 transition-colors duration-300 shadow-md"
                 >
                     Cancelar
                 </button>

@@ -29,11 +29,21 @@ export interface Appointment {
   userId?: string;
 }
 
-// FIX: Add User interface to resolve missing type errors.
 export interface User {
   id: string;
   name: string;
   email: string;
   phone: string;
   isAdmin?: boolean;
+}
+
+export interface Announcement {
+  id: string;
+  content: string;
+}
+
+export interface Partnership {
+  id: string;
+  name: string;
+  description: string;
 }
