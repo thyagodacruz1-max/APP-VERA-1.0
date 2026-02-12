@@ -7,9 +7,20 @@ function getValueFromStorage<T,>(key: string, initialValue: T): T {
   }
   try {
     const item = window.localStorage.getItem(key);
-    return item ? JSON.parse(item) : initialValue;
+    // If there's no item in storage, return the initial value.
+    if (item === null) {
+      return initialValue;
+    }
+    const parsedItem = JSON.parse(item);
+    // If the stored value is explicitly null (which can happen if "null" was stored),
+    // fall back to the initial value. This is critical for arrays to prevent crashes.
+    if (parsedItem === null) {
+      return initialValue;
+    }
+    return parsedItem;
   } catch (error) {
-    console.error(error);
+    // If JSON.parse fails (e.g., malformed data), it's safer to reset to the initial value.
+    console.error(`Error parsing localStorage key "${key}":`, error);
     return initialValue;
   }
 }
