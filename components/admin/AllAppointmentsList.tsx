@@ -1,6 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
+// FIX: The User type is now correctly defined and exported from `types.ts`.
 import { Appointment, User, AppointmentStatus } from '../../types';
 import Card from '../ui/Card';
 import { CalendarIcon, ClockIcon, UserIcon, PhoneIcon, WhatsAppIcon } from '../icons';
@@ -41,11 +42,11 @@ const AdminAppointmentCard: React.FC<{ appointment: Appointment, client?: User }
                 <div className="border-t border-brand-primary/20 my-3"></div>
                 <div className="flex items-center text-brand-text text-sm">
                     <UserIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span className="font-semibold">{client?.name || 'Cliente não encontrado'}</span>
+                    <span className="font-semibold">{client?.name || appointment.clientName || 'Cliente não encontrado'}</span>
                 </div>
                 <div className="flex items-center text-brand-text text-sm mt-1">
                     <PhoneIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span>{client?.phone || 'Telefone não disponível'}</span>
+                    <span>{client?.phone || appointment.clientPhone || 'Telefone não disponível'}</span>
                 </div>
             </div>
 
@@ -90,7 +91,8 @@ const AllAppointmentsList: React.FC = () => {
       {upcomingAppointments.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {upcomingAppointments.map(apt => (
-            <AdminAppointmentCard key={apt.id} appointment={apt} client={getUserById(apt.userId)} />
+            // FIX: Check for apt.userId before calling getUserById to prevent errors for guest appointments.
+            <AdminAppointmentCard key={apt.id} appointment={apt} client={apt.userId ? getUserById(apt.userId) : undefined} />
           ))}
         </div>
       ) : (
