@@ -1,0 +1,5 @@
+{
+  "name": "Vera Magrin - Agendamento",
+  "description": "Uma aplicação web elegante para agendar serviços de manicure e pedicure. Permite o registro e login de clientes, visualização de agendamentos e contato via WhatsApp.",
+  "requestFramePermissions": []
+}
